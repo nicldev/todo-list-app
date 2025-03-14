@@ -1,33 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import Parse from 'parse';
-
-Parse.initialize("VrbNgQ552mU7ujMioLAfrpjJlLctKYe4g7htLWQc", "SYbVoUNeftgIbS23QbnDjKdOqBd50MWdggA7Sv0J4");
-Parse.serverURL = 'https://parseapi.back4app.com/';
+import Parse from './services/api';
+import TaskForm from './components/TaskForm';
+import TaskItem from './components/TaskItem';
+import AuthForm from './components/AuthForm';
+import './index.css';
 
 function App() {
   const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
 
+  // Carregar tarefas ao iniciar
   useEffect(() => {
     fetchTasks();
+    setCurrentUser(Parse.User.current());
   }, []);
 
+  // Buscar tarefas do Back4app
   const fetchTasks = async () => {
     const query = new Parse.Query('Tasks');
+    if (currentUser) {
+      query.equalTo('userId', currentUser.id);
+    }
     const results = await query.find();
     setTasks(results.map(task => task.toJSON()));
   };
 
-  const addTask = async () => {
+  // Adicionar tarefa
+  const addTask = async (taskText) => {
     const Task = Parse.Object.extend('Tasks');
     const task = new Task();
-    task.set('task', newTask);
+    task.set('task', taskText);
     task.set('completed', false);
+    task.set('userId', currentUser.id);
     await task.save();
-    setNewTask('');
     fetchTasks();
   };
 
+  // Editar tarefa
+  const editTask = async (id, newText) => {
+    const query = new Parse.Query('Tasks');
+    const task = await query.get(id);
+    task.set('task', newText);
+    await task.save();
+    fetchTasks();
+  };
+
+  // Excluir tarefa
+  const deleteTask = async (id) => {
+    const query = new Parse.Query('Tasks');
+    const task = await query.get(id);
+    await task.destroy();
+    fetchTasks();
+  };
+
+  // Marcar tarefa como concluída
   const toggleTask = async (id) => {
     const query = new Parse.Query('Tasks');
     const task = await query.get(id);
@@ -36,47 +62,37 @@ function App() {
     fetchTasks();
   };
 
-  const deleteTask = async (id) => {
-    const query = new Parse.Query('Tasks');
-    const task = await query.get(id);
-    await task.destroy();
-    fetchTasks();
+  // Logout
+  const handleLogout = async () => {
+    await Parse.User.logOut();
+    setCurrentUser(null);
+    setTasks([]);
   };
 
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">To-Do List</h1>
-      <div className="mb-4">
-        <input
-          type="text"
-          value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
-          className="border p-2 mr-2"
-          placeholder="Nova tarefa"
-        />
-        <button onClick={addTask} className="bg-blue-500 text-white p-2">
-          Adicionar
-        </button>
-      </div>
-      <ul>
-        {tasks.map((task) => (
-          <li key={task.objectId} className="flex items-center mb-2">
-            <input
-              type="checkbox"
-              checked={task.completed}
-              onChange={() => toggleTask(task.objectId)}
-              className="mr-2"
-            />
-            <span className={task.completed ? 'line-through' : ''}>{task.task}</span>
-            <button
-              onClick={() => deleteTask(task.objectId)}
-              className="ml-2 text-red-500"
-            >
-              Excluir
-            </button>
-          </li>
-        ))}
-      </ul>
+      {currentUser ? (
+        <>
+          <button onClick={handleLogout} className="mb-4 bg-red-500 text-white p-2">
+            Logout
+          </button>
+          <TaskForm onAddTask={addTask} />
+          <ul>
+            {tasks.map((task) => (
+              <TaskItem
+                key={task.objectId}
+                task={task}
+                onEdit={editTask}
+                onDelete={deleteTask}
+                onToggle={toggleTask}
+              />
+            ))}
+          </ul>
+        </>
+      ) : (
+        <AuthForm onLogin={(user) => setCurrentUser(user)} />
+      )}
     </div>
   );
 }
