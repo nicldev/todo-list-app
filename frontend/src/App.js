@@ -9,13 +9,11 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Carregar tarefas ao iniciar
   useEffect(() => {
     fetchTasks();
     setCurrentUser(Parse.User.current());
   }, []);
 
-  // Buscar tarefas do Back4app
   const fetchTasks = async () => {
     const query = new Parse.Query('Tasks');
     if (currentUser) {
@@ -25,7 +23,6 @@ function App() {
     setTasks(results.map(task => task.toJSON()));
   };
 
-  // Adicionar tarefa
   const addTask = async (taskText) => {
     const Task = Parse.Object.extend('Tasks');
     const task = new Task();
@@ -36,7 +33,6 @@ function App() {
     fetchTasks();
   };
 
-  // Editar tarefa
   const editTask = async (id, newText) => {
     const query = new Parse.Query('Tasks');
     const task = await query.get(id);
@@ -45,7 +41,6 @@ function App() {
     fetchTasks();
   };
 
-  // Excluir tarefa
   const deleteTask = async (id) => {
     const query = new Parse.Query('Tasks');
     const task = await query.get(id);
@@ -53,7 +48,6 @@ function App() {
     fetchTasks();
   };
 
-  // Marcar tarefa como concluída
   const toggleTask = async (id) => {
     const query = new Parse.Query('Tasks');
     const task = await query.get(id);
@@ -62,7 +56,6 @@ function App() {
     fetchTasks();
   };
 
-  // Logout
   const handleLogout = async () => {
     await Parse.User.logOut();
     setCurrentUser(null);
@@ -70,29 +63,37 @@ function App() {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">To-Do List</h1>
-      {currentUser ? (
-        <>
-          <button onClick={handleLogout} className="mb-4 bg-red-500 text-white p-2">
-            Logout
-          </button>
-          <TaskForm onAddTask={addTask} />
-          <ul>
-            {tasks.map((task) => (
-              <TaskItem
-                key={task.objectId}
-                task={task}
-                onEdit={editTask}
-                onDelete={deleteTask}
-                onToggle={toggleTask}
-              />
-            ))}
-          </ul>
-        </>
-      ) : (
-        <AuthForm onLogin={(user) => setCurrentUser(user)} />
-      )}
+    <div className="min-h-screen bg-gradient-to-r from-blue-50 to-purple-50 p-4">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">To-Do List</h1>
+        {currentUser ? (
+          <>
+            <div className="flex justify-between items-center mb-6">
+              <p className="text-gray-600">Bem-vindo, {currentUser.getUsername()}!</p>
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
+              >
+                Logout
+              </button>
+            </div>
+            <TaskForm onAddTask={addTask} />
+            <ul className="mt-6 space-y-3">
+              {tasks.map((task) => (
+                <TaskItem
+                  key={task.objectId}
+                  task={task}
+                  onEdit={editTask}
+                  onDelete={deleteTask}
+                  onToggle={toggleTask}
+                />
+              ))}
+            </ul>
+          </>
+        ) : (
+          <AuthForm onLogin={(user) => setCurrentUser(user)} />
+        )}
+      </div>
     </div>
   );
 }
